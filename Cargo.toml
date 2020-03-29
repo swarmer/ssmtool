@@ -1,0 +1,15 @@
+[package]
+name = "ssmtool"
+description = "A CLI for SSM Parameter Store"
+publish = false
+license = "MIT"
+version = "0.1.0"
+authors = ["Anton Barkovsky <anton@swarmer.me>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.33.0"
+
+[[bin]]
+name = "ssmtool"
+path = "src/main.rs"
