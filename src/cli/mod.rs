@@ -12,7 +12,14 @@ pub async fn cli_future() -> i32 {
         Some("env") => {
             let submatches = matches.subcommand_matches("env").unwrap();
             let args = env::EnvArgs {
-                prefix: String::from(submatches.value_of("prefix").unwrap()),
+                path: String::from(submatches.value_of("PATH").unwrap()),
+                uppercase: submatches.is_present("uppercase"),
+                add_prefix: submatches.value_of("add-prefix").map(String::from),
+                command: submatches
+                    .values_of("COMMAND")
+                    .unwrap()
+                    .map(String::from)
+                    .collect(),
             };
             env::env_subcommand(args).await
         }
@@ -31,7 +38,7 @@ pub async fn cli_future() -> i32 {
         Err(error) => {
             error!("{}", error);
             for underlying_error in error.iter_causes() {
-                error!("Caused by: {}", underlying_error);
+                error!("  Caused by: {}", underlying_error);
             }
             1
         }
