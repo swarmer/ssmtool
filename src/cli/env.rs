@@ -4,8 +4,8 @@ use std::time::Duration;
 use failure::Error;
 use log;
 use rusoto_core::Region;
-use rusoto_ssm::Ssm;
 use rusoto_ssm as ssm;
+use rusoto_ssm::Ssm;
 use tokio::process::Command;
 
 #[derive(Clone, Debug)]
@@ -24,20 +24,25 @@ fn get_client() -> ssm::SsmClient {
     )
 }
 
-async fn get_parameters(client: &ssm::SsmClient, prefix: &str) -> Result<Vec<ssm::Parameter>, Error> {
+async fn get_parameters(
+    client: &ssm::SsmClient,
+    prefix: &str,
+) -> Result<Vec<ssm::Parameter>, Error> {
     let mut pagination_token = None;
     let mut parameters = vec![];
 
     loop {
-        let result = client.get_parameters_by_path(ssm::GetParametersByPathRequest {
-            next_token: pagination_token.clone(),
+        let result = client
+            .get_parameters_by_path(ssm::GetParametersByPathRequest {
+                next_token: pagination_token.clone(),
 
-            path: String::from(prefix),
-            recursive: Some(true),
-            with_decryption: Some(true),
+                path: String::from(prefix),
+                recursive: Some(true),
+                with_decryption: Some(true),
 
-            ..ssm::GetParametersByPathRequest::default()
-        }).await?;
+                ..ssm::GetParametersByPathRequest::default()
+            })
+            .await?;
         log::debug!("SSM result: {:?}", result);
 
         parameters.extend(result.parameters.unwrap());
@@ -45,7 +50,7 @@ async fn get_parameters(client: &ssm::SsmClient, prefix: &str) -> Result<Vec<ssm
         match result.next_token {
             Some(t) => {
                 pagination_token = Some(t);
-            },
+            }
             None => {
                 break;
             }
@@ -55,7 +60,10 @@ async fn get_parameters(client: &ssm::SsmClient, prefix: &str) -> Result<Vec<ssm
     Ok(parameters)
 }
 
-fn build_env_map<'a, 'b>(prefix: &'a str, parameters: &'b Vec<ssm::Parameter>) -> HashMap<&'b str, &'b str> {
+fn build_env_map<'a, 'b>(
+    prefix: &'a str,
+    parameters: &'b [ssm::Parameter],
+) -> HashMap<&'b str, &'b str> {
     let mut env = HashMap::new();
 
     for param in parameters {
@@ -78,10 +86,7 @@ pub async fn env_subcommand(args: EnvArgs) -> Result<i32, Error> {
     let env = build_env_map(&args.prefix, &parameters);
     log::debug!("Using environment: {:?}", env);
 
-    let exit_status: std::process::ExitStatus = Command::new("env")
-        .envs(env)
-        .status()
-        .await?;
+    let exit_status: std::process::ExitStatus = Command::new("env").envs(env).status().await?;
     log::debug!("Subcommand exited with status: {:?}", exit_status);
 
     Ok(exit_status.code().unwrap())
